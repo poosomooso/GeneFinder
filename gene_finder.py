@@ -2,14 +2,15 @@
 """
 YOUR HEADER COMMENT HERE
 
-@author: YOUR NAME HERE
+@author: Serena Chen
 
 """
 
 import random
 from amino_acids import aa, codons, aa_table   # you may find these useful
 from load import load_seq
-
+stopCodons = ["TAA", "TGA", "TAG"]
+startCodon = 'ATG'
 
 def shuffle_string(s):
     """Shuffles the characters in the input string
@@ -29,9 +30,22 @@ def get_complement(nucleotide):
     'T'
     >>> get_complement('C')
     'G'
+    >>> get_complement('T')
+    'A'
+    >>> get_complement('G')
+    'C'
+
+    Added additional tests so that all nucleotide cases are accounted for.
     """
-    # TODO: implement this
-    pass
+    if nucleotide == 'A':
+        return 'T'
+    elif nucleotide == 'T':
+        return 'A'
+    elif nucleotide == 'G':
+        return 'C'
+    elif nucleotide == 'C':
+        return 'G'
+    raise ValueError("get_complement(nucleotide) only supports a single character of either 'A', 'C', 'G', or 'T'.")
 
 
 def get_reverse_complement(dna):
@@ -44,9 +58,13 @@ def get_reverse_complement(dna):
     'AAAGCGGGCAT'
     >>> get_reverse_complement("CCGCGTTCA")
     'TGAACGCGG'
+
+    These cases go through all the nucleotides and are sufficiently un-symmetrical.
     """
-    # TODO: implement this
-    pass
+    newSeq = ""
+    for i in range(len(dna)-1, -1, -1):
+        newSeq+=get_complement(dna[i])
+    return newSeq
 
 
 def rest_of_ORF(dna):
@@ -61,9 +79,17 @@ def rest_of_ORF(dna):
     'ATG'
     >>> rest_of_ORF("ATGAGATAGG")
     'ATGAGA'
+    >>> rest_of_ORF("ATGGGTTATGATTAGATGAAATAG")
+    'ATGGGTTATGAT'
+
+    Added additional test to make sure that it only checks for the first orf.
     """
-    # TODO: implement this
-    pass
+    index = 0
+    while index<len(dna) and not (dna[index:index+3] in stopCodons):
+        index+=3
+    if(index>len(dna)):
+        index = len(dna)
+    return dna[0:index]
 
 
 def find_all_ORFs_oneframe(dna):
@@ -78,9 +104,22 @@ def find_all_ORFs_oneframe(dna):
         returns: a list of non-nested ORFs
     >>> find_all_ORFs_oneframe("ATGCATGAATGTAGATAGATGTGCCC")
     ['ATGCATGAATGTAGA', 'ATGTGCCC']
+    >>> find_all_ORFs_oneframe("TAGTAAATGTAGATGCATGAATGTAGATAGATGTGCCC")
+    ['ATG', 'ATGCATGAATGTAGA', 'ATGTGCCC']
+
+    Added additional test to make sure that it works even if the sequence doesn't start at 'ATG', 
+    and also that it doesn't check for stop codons before a start codon has been found
     """
-    # TODO: implement this
-    pass
+    index = 0
+    orfs = []
+    while index<len(dna):
+        if(dna[index:index+3]==startCodon):
+            o = rest_of_ORF(dna[index:]) 
+            orfs.append(o)
+            index+=len(o)
+        else:
+            index+=3
+    return orfs
 
 
 def find_all_ORFs(dna):
@@ -95,9 +134,12 @@ def find_all_ORFs(dna):
 
     >>> find_all_ORFs("ATGCATGAATGTAG")
     ['ATGCATGAATGTAG', 'ATGAATGTAG', 'ATG']
+    >>> find_all_ORFs("A")
+    []
+
+    We haven't yet checked what happens when there are no results
     """
-    # TODO: implement this
-    pass
+    return find_all_ORFs_oneframe(dna) + find_all_ORFs_oneframe(dna[1:]) + find_all_ORFs_oneframe(dna[2:])
 
 
 def find_all_ORFs_both_strands(dna):
@@ -108,58 +150,59 @@ def find_all_ORFs_both_strands(dna):
         returns: a list of non-nested ORFs
     >>> find_all_ORFs_both_strands("ATGCGAATGTAGCATCAAA")
     ['ATGCGAATG', 'ATGCTACATTCGCAT']
+
+    I think these tests are sufficient
     """
-    # TODO: implement this
-    pass
+    return find_all_ORFs(dna) + find_all_ORFs(get_reverse_complement(dna))
 
 
-def longest_ORF(dna):
-    """ Finds the longest ORF on both strands of the specified DNA and returns it
-        as a string
-    >>> longest_ORF("ATGCGAATGTAGCATCAAA")
-    'ATGCTACATTCGCAT'
-    """
-    # TODO: implement this
-    pass
+# def longest_ORF(dna):
+#     """ Finds the longest ORF on both strands of the specified DNA and returns it
+#         as a string
+#     >>> longest_ORF("ATGCGAATGTAGCATCAAA")
+#     'ATGCTACATTCGCAT'
+#     """
+#     # TODO: implement this
+#     pass
 
 
-def longest_ORF_noncoding(dna, num_trials):
-    """ Computes the maximum length of the longest ORF over num_trials shuffles
-        of the specfied DNA sequence
+# def longest_ORF_noncoding(dna, num_trials):
+#     """ Computes the maximum length of the longest ORF over num_trials shuffles
+#         of the specfied DNA sequence
 
-        dna: a DNA sequence
-        num_trials: the number of random shuffles
-        returns: the maximum length longest ORF """
-    # TODO: implement this
-    pass
-
-
-def coding_strand_to_AA(dna):
-    """ Computes the Protein encoded by a sequence of DNA.  This function
-        does not check for start and stop codons (it assumes that the input
-        DNA sequence represents an protein coding region).
-
-        dna: a DNA sequence represented as a string
-        returns: a string containing the sequence of amino acids encoded by the
-                 the input DNA fragment
-
-        >>> coding_strand_to_AA("ATGCGA")
-        'MR'
-        >>> coding_strand_to_AA("ATGCCCGCTTT")
-        'MPA'
-    """
-    # TODO: implement this
-    pass
+#         dna: a DNA sequence
+#         num_trials: the number of random shuffles
+#         returns: the maximum length longest ORF """
+#     # TODO: implement this
+#     pass
 
 
-def gene_finder(dna):
-    """ Returns the amino acid sequences that are likely coded by the specified dna
+# def coding_strand_to_AA(dna):
+#     """ Computes the Protein encoded by a sequence of DNA.  This function
+#         does not check for start and stop codons (it assumes that the input
+#         DNA sequence represents an protein coding region).
 
-        dna: a DNA sequence
-        returns: a list of all amino acid sequences coded by the sequence dna.
-    """
-    # TODO: implement this
-    pass
+#         dna: a DNA sequence represented as a string
+#         returns: a string containing the sequence of amino acids encoded by the
+#                  the input DNA fragment
+
+#         >>> coding_strand_to_AA("ATGCGA")
+#         'MR'
+#         >>> coding_strand_to_AA("ATGCCCGCTTT")
+#         'MPA'
+#     """
+#     # TODO: implement this
+#     pass
+
+
+# def gene_finder(dna):
+#     """ Returns the amino acid sequences that are likely coded by the specified dna
+
+#         dna: a DNA sequence
+#         returns: a list of all amino acid sequences coded by the sequence dna.
+#     """
+#     # TODO: implement this
+#     pass
 
 if __name__ == "__main__":
     import doctest
