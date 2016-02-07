@@ -62,6 +62,7 @@ def get_reverse_complement(dna):
     These cases go through all the nucleotides and are sufficiently un-symmetrical.
     """
     newSeq = ""
+    #iterate backwords through the string
     for i in range(len(dna)-1, -1, -1):
         newSeq+=get_complement(dna[i])
     return newSeq
@@ -156,54 +157,138 @@ def find_all_ORFs_both_strands(dna):
     return find_all_ORFs(dna) + find_all_ORFs(get_reverse_complement(dna))
 
 
-# def longest_ORF(dna):
-#     """ Finds the longest ORF on both strands of the specified DNA and returns it
-#         as a string
-#     >>> longest_ORF("ATGCGAATGTAGCATCAAA")
-#     'ATGCTACATTCGCAT'
-#     """
-#     # TODO: implement this
-#     pass
+def longest_ORF(dna):
+    """ Finds the longest ORF on both strands of the specified DNA and returns it
+        as a string
+    >>> longest_ORF("ATGCGAATGTAGCATCAAA")
+    'ATGCTACATTCGCAT'
+    >>> longest_ORF("")
+    ''
+
+    Checking to make sure that it can handle no ORFs.
+    """
+    try:
+        return max(find_all_ORFs_both_strands(dna), key=lambda s:len(s))
+    except ValueError:
+        #if empty list
+        return ""
 
 
-# def longest_ORF_noncoding(dna, num_trials):
-#     """ Computes the maximum length of the longest ORF over num_trials shuffles
-#         of the specfied DNA sequence
 
-#         dna: a DNA sequence
-#         num_trials: the number of random shuffles
-#         returns: the maximum length longest ORF """
-#     # TODO: implement this
-#     pass
+def longest_ORF_noncoding(dna, num_trials):
+    """ Computes the maximum length of the longest ORF over num_trials shuffles
+        of the specfied DNA sequence
 
-
-# def coding_strand_to_AA(dna):
-#     """ Computes the Protein encoded by a sequence of DNA.  This function
-#         does not check for start and stop codons (it assumes that the input
-#         DNA sequence represents an protein coding region).
-
-#         dna: a DNA sequence represented as a string
-#         returns: a string containing the sequence of amino acids encoded by the
-#                  the input DNA fragment
-
-#         >>> coding_strand_to_AA("ATGCGA")
-#         'MR'
-#         >>> coding_strand_to_AA("ATGCCCGCTTT")
-#         'MPA'
-#     """
-#     # TODO: implement this
-#     pass
+        dna: a DNA sequence
+        num_trials: the number of random shuffles
+        returns: the maximum length longest ORF """
+    long_orf_strings = []
+    for i in range(num_trials):
+        long_orf_strings.append(longest_ORF(shuffle_string(dna)))
+    return max(long_orf_strings, key=lambda s:len(s))
 
 
-# def gene_finder(dna):
-#     """ Returns the amino acid sequences that are likely coded by the specified dna
+def coding_strand_to_AA(dna):
+    """ Computes the Protein encoded by a sequence of DNA.  This function
+        does not check for start and stop codons (it assumes that the input
+        DNA sequence represents an protein coding region).
 
-#         dna: a DNA sequence
-#         returns: a list of all amino acid sequences coded by the sequence dna.
-#     """
-#     # TODO: implement this
-#     pass
+        dna: a DNA sequence represented as a string
+        returns: a string containing the sequence of amino acids encoded by the
+                 the input DNA fragment
+
+        >>> coding_strand_to_AA("ATGCGA")
+        'MR'
+        >>> coding_strand_to_AA("ATGCCCGCTTT")
+        'MPA'
+        >>> coding_strand_to_AA("ATGCCCGCTTTTT")
+        'MPAF'
+        >>> coding_strand_to_AA("A")
+        ''
+
+        testing len(dna)%3==1, and an string with only one nucleotide
+    """
+    aminos = ""
+    for i in range(0,len(dna)-2,3): 
+        #len - 2 because if the possible lengths:
+        #len%3==0, len%3 == 1, len%3==2
+            #len-2 allows you to access the first index of the last full group of 3
+            #stopping before the leftover group of 1 or 2
+            #sorry for jank implementation
+        aminos+=aa_table[dna[i:i+3]]
+    return aminos
+
+
+def gene_finder(dna):
+    """ Returns the amino acid sequences that are likely coded by the specified dna
+
+        dna: a DNA sequence
+        returns: a list of all amino acid sequences coded by the sequence dna.
+    """
+    threshold = longest_ORF_noncoding(dna,1500)
+    all_orfs = find_all_ORFs_both_strands(dna)
+    aminos = []
+    for o in all_orfs:
+        if len(o)>=len(threshold):
+            aminos.append(coding_strand_to_AA(o))
+    return aminos
+def nitrogenase_substring():
+    """ finds the metagenome with the longest substring in common with
+    the nitrogenase sequence.
+
+    I have no idea if it works, but it spit out an answer with no errors after over an hour
+    of running, so i'm considering that success.
+
+    """
+    import load
+    nit_seq = load.load_nitrogenase_seq()
+    metagenomes = load.load_metagenome()
+    subs = []
+    for meta in metagenomes:
+        subs.append((meta[0], longest_substring(meta[1], nit_seq)))
+    return max(subs, key=lambda s:s[1])[0]
+
+
+
+
+def longest_substring(str1, str2):
+    """
+    Finds the longest substring in common in two given strings.
+
+    >>> longest_substring("ABCDEFGABACD", "FEDCBAABAC")
+    'ABAC'
+    """
+    zeros = [0]*(len(str2)+1)
+    L = [zeros]
+    for i in range(len(str1)+1):
+        L.append(zeros[:])
+
+    for i in range(1,len(str1)+1):
+        for j in range(1,len(str2)+1):
+            if str1[i-1] == str2[j-1]:
+                L[i][j] = L[i-1][j-1] + 1
+            else:
+                L[i][j] = 0
+    maxr = 0
+    maxc = 0
+    maxnum = 0
+    for i in range(1,len(str1)+1):
+        for j in range(1,len(str2)+1):
+            if L[i][j] > maxnum:
+                maxnum = L[i][j]
+                maxr = i
+                maxc = j
+    return str1[maxr-maxnum:maxr]
 
 if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
+    # import doctest
+    # doctest.testmod()
+
+    from load import load_seq
+    dna = load_seq("./data/X73525.fa")
+    print(gene_finder(dna))
+    
+    print nitrogenase_substring()
+
+    
+
